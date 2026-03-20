@@ -3,28 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase Auth + Cloud Storage</title>
+    <title>Firebase Cloud: DM Edition</title>
     <style>
-        /* Стили из предыдущего шага + новые для Auth */
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', sans-serif; background: #667eea; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .app-container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 20px; }
-        .card { background: white; padding: 25px; border-radius: 15px; shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        
-        /* Скрытие элементов */
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .hidden { display: none !important; }
         
-        #user-profile { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; justify-content: space-between; }
-        #user-profile img { width: 40px; height: 40px; border-radius: 50%; }
+        /* Профиль */
+        #user-profile { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; justify-content: space-between; }
+        #user-profile img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #764ba2; }
         
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        /* Кнопки */
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; }
         .btn-login { background: #4285F4; color: white; width: 100%; }
-        .btn-logout { background: #f44336; color: white; font-size: 12px; }
         .btn-send { background: #764ba2; color: white; width: 100%; margin-top: 10px; }
+        .btn-dm { background: #e4e6eb; color: #050505; font-size: 12px; margin-top: 5px; }
+        .btn-dm:hover { background: #d8dadf; }
+
+        /* Сообщения */
+        .message-card { margin-top: 15px; position: relative; }
+        .post-img { max-width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
         
-        .message-card { background: #fff; padding: 15px; border-radius: 10px; margin-top: 10px; }
-        input[type="file"] { margin: 10px 0; }
-        .post-img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+        /* Окно чата (Floating) */
+        #chat-window { position: fixed; bottom: 20px; right: 20px; width: 300px; height: 400px; z-index: 1000; display: flex; flex-direction: column; border: 1px solid #ddd; }
+        #chat-messages { flex-grow: 1; overflow-y: auto; padding: 10px; background: #fff; font-size: 14px; }
+        .dm-msg { margin-bottom: 8px; padding: 5px 10px; border-radius: 10px; max-width: 80%; }
+        .my-msg { background: #0084ff; color: white; align-self: flex-end; margin-left: auto; }
+        .their-msg { background: #e4e6eb; color: black; }
     </style>
 </head>
 <body>
@@ -39,14 +46,14 @@
             <div id="user-profile">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <img id="userPhoto" src="" alt="avatar">
-                    <span id="userNameDisplay"></span>
+                    <span id="userNameDisplay" style="font-weight:bold;"></span>
                 </div>
-                <button id="logoutBtn" class="btn btn-logout">Выйти</button>
+                <button id="logoutBtn" class="btn" style="background:#eee;">Выход</button>
             </div>
 
             <form id="feedbackForm">
-                <input type="text" id="postText" placeholder="Что у вас нового?" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
-                <input type="file" id="imageInput" accept="image/*">
+                <input type="text" id="postText" placeholder="Что нового?" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                <input type="file" id="imageInput" accept="image/*" style="margin-top:10px;">
                 <button type="submit" id="submitBtn" class="btn btn-send">Опубликовать</button>
             </form>
         </div>
@@ -55,9 +62,21 @@
     <div id="messages-list"></div>
 </div>
 
+<div id="chat-window" class="card hidden">
+    <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
+        <strong id="chat-with-name">Чат</strong>
+        <button onclick="document.getElementById('chat-window').classList.add('hidden')" style="border:none; background:none; cursor:pointer;">✖</button>
+    </div>
+    <div id="chat-messages" style="display:flex; flex-direction:column;"></div>
+    <div style="display:flex; gap:5px; margin-top:5px;">
+        <input type="text" id="dmInput" placeholder="Сообщение..." style="flex-grow:1; padding:5px; border-radius:4px; border:1px solid #ddd;">
+        <button id="sendDmBtn" class="btn" style="background:#0084ff; color:white; padding:5px 10px;">></button>
+    </div>
+</div>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
 
@@ -78,8 +97,10 @@
     const provider = new GoogleAuthProvider();
 
     let currentUser = null;
+    let activeChatId = null;
+    let unsubscribeChat = null;
 
-    // --- ЛОГИКА АВТОРИЗАЦИИ ---
+    // --- АВТОРИЗАЦИЯ ---
     loginBtn.onclick = () => signInWithPopup(auth, provider);
     logoutBtn.onclick = () => signOut(auth);
 
@@ -97,7 +118,7 @@
         }
     });
 
-    // --- ЭТАП V: ЗАГРУЗКА КАРТИНКИ + ПОСТ ---
+    // --- ОБЩАЯ ЛЕНТА ---
     feedbackForm.onsubmit = async (e) => {
         e.preventDefault();
         const text = postText.value;
@@ -105,40 +126,27 @@
         let imageUrl = null;
 
         submitBtn.disabled = true;
-        submitBtn.innerText = "Загрузка...";
-
         try {
-            // Если есть файл, сначала грузим в Storage
             if (file) {
                 const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
                 await uploadBytes(storageRef, file);
                 imageUrl = await getDownloadURL(storageRef);
             }
-
-            // Пишем в Firestore
             await addDoc(collection(db, "requests"), {
                 name: currentUser.displayName,
+                uid: currentUser.uid, // Важно для DM!
                 text: text,
                 image: imageUrl,
-                uid: currentUser.uid,
-                timestamp: serverTimestamp(),
-                likes: 0
+                timestamp: serverTimestamp()
             });
-
             feedbackForm.reset();
-        } catch (err) {
-            alert("Ошибка доступа! Проверьте Rules.");
-            console.error(err);
-        }
+        } catch (err) { console.error(err); }
         submitBtn.disabled = false;
-        submitBtn.innerText = "Опубликовать";
     };
 
-    // --- РЕНДЕР ЛЕНТЫ ---
-    const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
-    onSnapshot(q, (snapshot) => {
+    onSnapshot(query(collection(db, "requests"), orderBy("timestamp", "desc")), (snap) => {
         messagesList.innerHTML = "";
-        snapshot.forEach(docSnap => {
+        snap.forEach(docSnap => {
             const data = docSnap.data();
             const card = document.createElement('div');
             card.className = 'message-card card';
@@ -146,10 +154,58 @@
                 <strong>${data.name}</strong>
                 <p>${data.text}</p>
                 ${data.image ? `<img src="${data.image}" class="post-img">` : ''}
+                ${currentUser && data.uid !== currentUser.uid ? `<button class="btn btn-dm" onclick="window.openChat('${data.uid}', '${data.name}')">Написать ЛС</button>` : ''}
             `;
             messagesList.appendChild(card);
         });
     });
+
+    // --- ЛИЧНЫЕ СООБЩЕНИЯ (DM) ---
+    window.openChat = (recipientId, recipientName) => {
+        const chatId = [currentUser.uid, recipientId].sort().join('_');
+        activeChatId = chatId;
+        
+        document.getElementById('chat-with-name').innerText = recipientName;
+        document.getElementById('chat-window').classList.remove('hidden');
+        
+        // Подписка на сообщения чата
+        if (unsubscribeChat) unsubscribeChat();
+        const msgQuery = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
+        
+        unsubscribeChat = onSnapshot(msgQuery, (snap) => {
+            const chatBox = document.getElementById('chat-messages');
+            chatBox.innerHTML = "";
+            snap.forEach(m => {
+                const mData = m.data();
+                const mDiv = document.createElement('div');
+                mDiv.className = `dm-msg ${mData.senderId === currentUser.uid ? 'my-msg' : 'their-msg'}`;
+                mDiv.innerText = mData.text;
+                chatBox.appendChild(mDiv);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    };
+
+    sendDmBtn.onclick = async () => {
+        const text = dmInput.value;
+        if (!text || !activeChatId) return;
+
+        const recipientId = activeChatId.replace(currentUser.uid, "").replace("_", "");
+        
+        // Создаем заголовок чата, чтобы Rules пустили нас
+        await setDoc(doc(db, "chats", activeChatId), {
+            users: [currentUser.uid, recipientId],
+            timestamp: serverTimestamp()
+        }, { merge: true });
+
+        // Пишем сообщение
+        await addDoc(collection(db, "chats", activeChatId, "messages"), {
+            senderId: currentUser.uid,
+            text: text,
+            timestamp: serverTimestamp()
+        });
+        dmInput.value = "";
+    };
 </script>
 </body>
 </html>
