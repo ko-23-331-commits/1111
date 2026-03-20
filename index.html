@@ -2,26 +2,168 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Мой облачный проект</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Live Feed</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; padding: 50px; background-color: #f4f4f9; }
-        .form-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 300px; }
-        input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #f4b400; border: none; color: white; font-weight: bold; cursor: pointer; border-radius: 5px; }
-        button:hover { background: #dfa400; }
+        /* 1. Глобальные стили (Сброс и Шрифт) */
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+        
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Красивый градиент */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        /* 2. Основной контейнер (App Shell) */
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 3. Стилизация блока ФОРМЫ (Стеклянный эффект) */
+        .form-container { 
+            background: rgba(255, 255, 255, 0.9); /* Полупрозрачный белый */
+            padding: 30px; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); /* Мягкая тень */
+            backdrop-filter: blur(5px); /* Размытие фона за формой */
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .form-container h3 { 
+            font-size: 24px;
+            margin-bottom: 20px; 
+            color: #4a148c; /* Темно-фиолетовый акцент */
+            text-align: center;
+            font-weight: 600;
+        }
+
+        /* Поля ввода */
+        input { 
+            width: 100%; 
+            padding: 12px 15px; 
+            margin-bottom: 15px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 8px; 
+            font-size: 16px;
+            transition: all 0.3s ease; /* Плавная анимация при фокусе */
+        }
+
+        input:focus { 
+            border-color: #764ba2; 
+            box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1); 
+        }
+
+        /* Кнопка отправки */
+        button#submitBtn { 
+            width: 100%; 
+            padding: 12px; 
+            background: linear-gradient(to right, #667eea, #764ba2); /* Градиент на кнопке */
+            border: none; 
+            color: white; 
+            font-size: 16px;
+            font-weight: bold; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button#submitBtn:hover { 
+            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4);
+        }
+
+        button#submitBtn:active { 
+            transform: translateY(1px); /* Эффект нажатия */
+        }
+
+        /* 4. Стилизация ЛЕНТЫ СООБЩЕНИЙ */
+        #messages-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Карточка одного сообщения */
+        .message-card {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.2s ease;
+            position: relative;
+        }
+
+        .message-card:hover {
+            transform: translateY(-2px); /* Легкое всплытие при наведении */
+        }
+
+        .message-card p strong {
+            color: #4a148c;
+            font-size: 1.1em;
+        }
+
+        .message-card p em {
+            color: #666;
+            font-size: 0.9em;
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* Кнопка ЛАЙКА */
+        .like-btn {
+            background: white;
+            border: 1px solid #e0e0e0;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #555;
+        }
+
+        .like-btn:hover {
+            background: #fff1f1;
+            border-color: #ffcccc;
+            color: #d32f2f;
+        }
+
+        .like-btn.liked {
+            background: #ffebee;
+            border-color: #ffcdd2;
+            color: #d32f2f;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
-<div class="form-container">
-    <h3>Отправить заявку</h3>
-    <form id="feedbackForm">
-        <input type="text" id="userName" placeholder="Ваше имя" required>
-        <input type="email" id="userEmail" placeholder="Ваш Email" required>
-        <button type="submit">Отправить в облако</button>
-    </form>
-</div>
+<div class="app-container">
+    <div class="form-container">
+        <h3>Оставить заявку</h3>
+        <form id="feedbackForm">
+            <input type="text" id="userName" placeholder="Ваше имя" required>
+            <input type="email" id="userEmail" placeholder="Ваш Email" required>
+            <button type="submit" id="submitBtn">Отправить</button>
+        </form>
+    </div>
 
+    <div id="messages-list"></div>
+</div>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
     import { 
@@ -45,55 +187,66 @@
     // 1. ОТПРАВКА ДАННЫХ
     document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
         e.preventDefault();
+        const btn = document.getElementById("submitBtn");
         const name = document.getElementById("userName").value;
         const email = document.getElementById("userEmail").value;
+
+        btn.innerText = "Отправка...";
+        btn.disabled = true;
 
         try {
             await addDoc(collection(db, "requests"), {
                 name,
                 email,
                 likes: 0,
-                timestamp: serverTimestamp() // Используем время сервера для точности
+                timestamp: serverTimestamp()
             });
             document.getElementById("feedbackForm").reset();
         } catch (e) { console.error("Ошибка:", e); }
+        
+        btn.innerText = "Отправить";
+        btn.disabled = false;
     });
 
-    // 2. РЕАКТИВНОЕ ОБНОВЛЕНИЕ (Real-time)
+    // 2. РЕАКТИВНОЕ ОБНОВЛЕНИЕ (Real-time) с новым HTML
     const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
     
     onSnapshot(q, (snapshot) => {
-        const container = document.getElementById("messages-list") || createContainer();
-        container.innerHTML = ""; // Очищаем перед обновлением
+        const container = document.getElementById("messages-list");
+        container.innerHTML = ""; // Очищаем
 
         snapshot.forEach((docSnap) => {
             const data = docSnap.data();
             const div = document.createElement("div");
             div.className = "message-card";
+            
+            // Немного магии JavaScript для красивых классов
+            const likesCount = data.likes || 0;
+            const likeBtnClass = likesCount > 0 ? "like-btn liked" : "like-btn";
+
             div.innerHTML = `
-                <p><strong>${data.name}</strong>: ${data.email}</p>
-                <button onclick="window.likePost('${docSnap.id}')">❤️ ${data.likes || 0}</button>
-                <hr>
+                <p><strong>${data.name}</strong> <em>${data.email}</em></p>
+                <button class="${likeBtnClass}" onclick="window.likePost('${docSnap.id}')">
+                    ❤️ ${likesCount}
+                </button>
             `;
             container.appendChild(div);
         });
     });
 
-    // 3. АТОМАРНЫЙ ЛАЙК
+    // 3. АТОМАРНЫЙ ЛАЙК (не изменился)
     window.likePost = async (id) => {
-        const docRef = doc(db, "requests", id);
-        await updateDoc(docRef, {
-            likes: increment(1) // Гарантирует корректный счет при 1000 кликах в сек.
-        });
+        try {
+            const docRef = doc(db, "requests", id);
+            await updateDoc(docRef, {
+                likes: increment(1)
+            });
+        } catch (e) {
+            console.error("Ошибка лайка:", e);
+            alert("Похоже, Security Rules запрещают это действие!");
+        }
     };
-
-    function createContainer() {
-        const div = document.createElement("div");
-        div.id = "messages-list";
-        div.style.marginTop = "20px";
-        document.body.appendChild(div);
-        return div;
-    }
 </script>
+
 </body>
 </html>
