@@ -3,163 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Live Feed</title>
+    <title>Firebase Auth + Cloud Storage</title>
     <style>
-        /* 1. Глобальные стили (Сброс и Шрифт) */
-        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+        /* Стили из предыдущего шага + новые для Auth */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #667eea; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .app-container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 20px; }
+        .card { background: white; padding: 25px; border-radius: 15px; shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
-        body { 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Красивый градиент */
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            color: #333;
-        }
-
-        /* 2. Основной контейнер (App Shell) */
-        .app-container {
-            width: 100%;
-            max-width: 800px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        /* 3. Стилизация блока ФОРМЫ (Стеклянный эффект) */
-        .form-container { 
-            background: rgba(255, 255, 255, 0.9); /* Полупрозрачный белый */
-            padding: 30px; 
-            border-radius: 16px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1); /* Мягкая тень */
-            backdrop-filter: blur(5px); /* Размытие фона за формой */
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-
-        .form-container h3 { 
-            font-size: 24px;
-            margin-bottom: 20px; 
-            color: #4a148c; /* Темно-фиолетовый акцент */
-            text-align: center;
-            font-weight: 600;
-        }
-
-        /* Поля ввода */
-        input { 
-            width: 100%; 
-            padding: 12px 15px; 
-            margin-bottom: 15px; 
-            border: 2px solid #e0e0e0; 
-            border-radius: 8px; 
-            font-size: 16px;
-            transition: all 0.3s ease; /* Плавная анимация при фокусе */
-        }
-
-        input:focus { 
-            border-color: #764ba2; 
-            box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1); 
-        }
-
-        /* Кнопка отправки */
-        button#submitBtn { 
-            width: 100%; 
-            padding: 12px; 
-            background: linear-gradient(to right, #667eea, #764ba2); /* Градиент на кнопке */
-            border: none; 
-            color: white; 
-            font-size: 16px;
-            font-weight: bold; 
-            cursor: pointer; 
-            border-radius: 8px; 
-            transition: transform 0.1s ease, box-shadow 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        button#submitBtn:hover { 
-            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4);
-        }
-
-        button#submitBtn:active { 
-            transform: translateY(1px); /* Эффект нажатия */
-        }
-
-        /* 4. Стилизация ЛЕНТЫ СООБЩЕНИЙ */
-        #messages-list {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        /* Карточка одного сообщения */
-        .message-card {
-            background: rgba(255, 255, 255, 0.8);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            border: 1px solid rgba(255,255,255,0.2);
-            transition: transform 0.2s ease;
-            position: relative;
-        }
-
-        .message-card:hover {
-            transform: translateY(-2px); /* Легкое всплытие при наведении */
-        }
-
-        .message-card p strong {
-            color: #4a148c;
-            font-size: 1.1em;
-        }
-
-        .message-card p em {
-            color: #666;
-            font-size: 0.9em;
-            display: block;
-            margin-top: 2px;
-        }
-
-        /* Кнопка ЛАЙКА */
-        .like-btn {
-            background: white;
-            border: 1px solid #e0e0e0;
-            padding: 6px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-            margin-top: 10px;
-            font-size: 14px;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            color: #555;
-        }
-
-        .like-btn:hover {
-            background: #fff1f1;
-            border-color: #ffcccc;
-            color: #d32f2f;
-        }
-
-        .like-btn.liked {
-            background: #ffebee;
-            border-color: #ffcdd2;
-            color: #d32f2f;
-            font-weight: bold;
-        }
+        /* Скрытие элементов */
+        .hidden { display: none !important; }
+        
+        #user-profile { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; justify-content: space-between; }
+        #user-profile img { width: 40px; height: 40px; border-radius: 50%; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-login { background: #4285F4; color: white; width: 100%; }
+        .btn-logout { background: #f44336; color: white; font-size: 12px; }
+        .btn-send { background: #764ba2; color: white; width: 100%; margin-top: 10px; }
+        
+        .message-card { background: #fff; padding: 15px; border-radius: 10px; margin-top: 10px; }
+        input[type="file"] { margin: 10px 0; }
+        .post-img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
-    <div class="form-container">
-        <h3>Оставить заявку</h3>
-        <form id="feedbackForm">
-            <input type="text" id="userName" placeholder="Ваше имя" required>
-            <input type="email" id="userEmail" placeholder="Ваш Email" required>
-            <button type="submit" id="submitBtn">Отправить</button>
-        </form>
+    <div class="card">
+        <div id="auth-section">
+            <button id="loginBtn" class="btn btn-login">Войти через Google</button>
+        </div>
+        
+        <div id="user-section" class="hidden">
+            <div id="user-profile">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <img id="userPhoto" src="" alt="avatar">
+                    <span id="userNameDisplay"></span>
+                </div>
+                <button id="logoutBtn" class="btn btn-logout">Выйти</button>
+            </div>
+
+            <form id="feedbackForm">
+                <input type="text" id="postText" placeholder="Что у вас нового?" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                <input type="file" id="imageInput" accept="image/*">
+                <button type="submit" id="submitBtn" class="btn btn-send">Опубликовать</button>
+            </form>
+        </div>
     </div>
 
     <div id="messages-list"></div>
@@ -167,87 +57,99 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-    import { 
-        getFirestore, collection, addDoc, onSnapshot, 
-        query, orderBy, updateDoc, doc, increment, serverTimestamp 
-    } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.md.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyCpKr0rUwBevRyGkVgj4qbaXC3AKZf0HB0",
-  authDomain: "project-4205512530464736582.firebaseapp.com",
-  projectId: "project-4205512530464736582",
-  storageBucket: "project-4205512530464736582.firebasestorage.app",
-  messagingSenderId: "765026109468",
-  appId: "1:765026109468:web:b84456640c87599af277d9",
-  measurementId: "G-H9NL58CQ4Y"
+        // ВСТАВЬТЕ ВАШИ КЛЮЧИ ТУТ
+        apiKey: "AIzaSyD6j7Bb_Dy5vbDzguwTn4i3DhH1E5SbuYQ",
+        authDomain: "enter-65f57.firebaseapp.com",
+        projectId: "enter-65f57",
+        storageBucket: "enter-65f57.firebasestorage.app",
+        messagingSenderId: "672982960171",
+        appId: "1:672982960171:web:c2364e2b8087a51f7426e"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
+    const provider = new GoogleAuthProvider();
 
-    // 1. ОТПРАВКА ДАННЫХ
-    document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById("submitBtn");
-        const name = document.getElementById("userName").value;
-        const email = document.getElementById("userEmail").value;
+    let currentUser = null;
 
-        btn.innerText = "Отправка...";
-        btn.disabled = true;
+    // --- ЛОГИКА АВТОРИЗАЦИИ ---
+    loginBtn.onclick = () => signInWithPopup(auth, provider);
+    logoutBtn.onclick = () => signOut(auth);
 
-        try {
-            await addDoc(collection(db, "requests"), {
-                name,
-                email,
-                likes: 0,
-                timestamp: serverTimestamp()
-            });
-            document.getElementById("feedbackForm").reset();
-        } catch (e) { console.error("Ошибка:", e); }
-        
-        btn.innerText = "Отправить";
-        btn.disabled = false;
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUser = user;
+            userSection.classList.remove('hidden');
+            authSection.classList.add('hidden');
+            userPhoto.src = user.photoURL;
+            userNameDisplay.innerText = user.displayName;
+        } else {
+            currentUser = null;
+            userSection.classList.add('hidden');
+            authSection.classList.remove('hidden');
+        }
     });
 
-    // 2. РЕАКТИВНОЕ ОБНОВЛЕНИЕ (Real-time) с новым HTML
+    // --- ЭТАП V: ЗАГРУЗКА КАРТИНКИ + ПОСТ ---
+    feedbackForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const text = postText.value;
+        const file = imageInput.files[0];
+        let imageUrl = null;
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Загрузка...";
+
+        try {
+            // Если есть файл, сначала грузим в Storage
+            if (file) {
+                const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
+                await uploadBytes(storageRef, file);
+                imageUrl = await getDownloadURL(storageRef);
+            }
+
+            // Пишем в Firestore
+            await addDoc(collection(db, "requests"), {
+                name: currentUser.displayName,
+                text: text,
+                image: imageUrl,
+                uid: currentUser.uid,
+                timestamp: serverTimestamp(),
+                likes: 0
+            });
+
+            feedbackForm.reset();
+        } catch (err) {
+            alert("Ошибка доступа! Проверьте Rules.");
+            console.error(err);
+        }
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Опубликовать";
+    };
+
+    // --- РЕНДЕР ЛЕНТЫ ---
     const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
-    
     onSnapshot(q, (snapshot) => {
-        const container = document.getElementById("messages-list");
-        container.innerHTML = ""; // Очищаем
-
-        snapshot.forEach((docSnap) => {
+        messagesList.innerHTML = "";
+        snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            const div = document.createElement("div");
-            div.className = "message-card";
-            
-            // Немного магии JavaScript для красивых классов
-            const likesCount = data.likes || 0;
-            const likeBtnClass = likesCount > 0 ? "like-btn liked" : "like-btn";
-
-            div.innerHTML = `
-                <p><strong>${data.name}</strong> <em>${data.email}</em></p>
-                <button class="${likeBtnClass}" onclick="window.likePost('${docSnap.id}')">
-                    ❤️ ${likesCount}
-                </button>
+            const card = document.createElement('div');
+            card.className = 'message-card card';
+            card.innerHTML = `
+                <strong>${data.name}</strong>
+                <p>${data.text}</p>
+                ${data.image ? `<img src="${data.image}" class="post-img">` : ''}
             `;
-            container.appendChild(div);
+            messagesList.appendChild(card);
         });
     });
-
-    // 3. АТОМАРНЫЙ ЛАЙК (не изменился)
-    window.likePost = async (id) => {
-        try {
-            const docRef = doc(db, "requests", id);
-            await updateDoc(docRef, {
-                likes: increment(1)
-            });
-        } catch (e) {
-            console.error("Ошибка лайка:", e);
-            alert("Похоже, Security Rules запрещают это действие!");
-        }
-    };
 </script>
-
 </body>
 </html>
